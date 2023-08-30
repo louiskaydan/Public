@@ -1,0 +1,8 @@
+# Jamroom Default robots.txt
+
+User-agent: *
+Disallow: /data/logs
+Disallow: /license.txt
+Disallow: /install.txt
+Disallow: /install.php
+Disallow: /repair.php.html

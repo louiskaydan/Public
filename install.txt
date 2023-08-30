@@ -1,0 +1,51 @@
+Thank you for downloading the Jamroom Core!
+
+Installing Jamroom on your server is super easy:
+
+1) Download the Latest Jamroom Core:
+
+   http://www.jamroom.net/
+
+2) Using a quality FTP Client upload the contents of
+   this directory to the directory on your server that
+   you want Jamroom to run from.  On many web hosting
+   setups the directory is normally named "public_html"
+   or "httpdocs".
+
+3) After the upload is finished, load up your site in
+   your browser:
+
+   http://yoursite.com
+
+   If you installed Jamroom into a sub directory of your
+   website, you will need to include the sub directory
+   in your URL - i.e.
+
+   http://yoursite.com/directory
+
+4) Enter your Database information into the installer.
+   (If the installer detects any issues with your PHP,
+   Server or MySQL installation it will tell you).  When
+   complete press the install button.
+
+5) Create the first account on the system by clicking on
+   the "Create Account" link in the header.
+
+   The first account in the system is automatically setup
+   as a MASTER ADMIN account, and you'll be directed to
+   the System Check after your account is created.
+
+6) Once inside the Admin Control Panel (ACP) click on the
+   'Marketplace' link in the left hand module menu and
+   install any additional modules or skins you would like.
+
+
+If you run into any issues during your install that you're
+unable to work out, or have questions, make sure and let
+us know - we're here to help.
+
+http://www.jamroom.net/the-jamroom-network
+
+We hope you enjoy using Jamroom!
+
+- The Jamroom Team

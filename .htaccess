@@ -1,0 +1,28 @@
+# Jamroom Apache .htaccess file
+DirectoryIndex modules/jrCore/router.php
+
+Options +FollowSymLinks -MultiViews -Indexes
+
+# Headers
+<IfModule mod_headers.c>
+Header unset ETag
+Header always set X-Content-Type-Options nosniff
+Header always set X-XSS-Protection "1; mode=block"
+FileETag None
+</IfModule>
+
+# Compress everything we can
+<IfModule mod_filter.c>
+AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript text/javascript-x application/javascript
+</IfModule>
+
+# All requests through the router
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule ^modules/.*\.tpl$ - [F,L,NC]
+RewriteRule ^skins/.*\.tpl$ - [F,L,NC]
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-l
+RewriteRule ^(.*)$ modules/jrCore/router.php?_uri=$1 [B,NC,L]
+</IfModule>

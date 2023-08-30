@@ -1,0 +1,168 @@
+<?php
+/**
+ * <html><body>This file must be renamed to <b>repair.php</b> to function!<div style="display:none">
+ * Jamroom Database Repair script
+ * copyright 2003 - 2017 by The Jamroom Network - All Rights Reserved
+ * http://www.jamroom.net
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0.  Please see the included "license.html" file.
+ *
+ * Jamroom includes works that are not developed by The Jamroom Network
+ * and are used under license - copies of all licenses are included and
+ * can be found in the "contrib" directory within the module, as well
+ * as within the "license.html" file.
+ *
+ * Jamroom may use modules and skins that are licensed by third party
+ * developers, and licensed under a different license than the Jamroom
+ * Core - please reference the individual module or skin license that
+ * is included with your download.
+ *
+ * This software is provided "as is" and any express or implied
+ * warranties, including, but not limited to, the implied warranties
+ * of merchantability and fitness for a particular purpose are
+ * disclaimed.  In no event shall the Jamroom Network be liable for
+ * any direct, indirect, incidental, special, exemplary or
+ * consequential damages (including but not limited to, procurement
+ * of substitute goods or services; loss of use, data or profits;
+ * or business interruption) however caused and on any theory of
+ * liability, whether in contract, strict liability, or tort
+ * (including negligence or otherwise) arising from the use of this
+ * software, even if advised of the possibility of such damage.
+ * Some jurisdictions may not allow disclaimers of implied warranties
+ * and certain statements in the above disclaimer may not apply to
+ * you as regards implied warranties; the other terms and conditions
+ * remain enforceable notwithstanding. In some jurisdictions it is
+ * not permitted to limit liability and therefore such limitations
+ * may not apply to you.
+ */
+
+// Define our base dir
+define('APP_DIR', dirname(__FILE__));
+define('IN_JAMROOM_INSTALLER', 1);
+define('DEFAULT_JAMROOM_SKIN', 'jrElastic2');
+
+// Typically no need to edit below here
+date_default_timezone_set('UTC');
+ini_set('session.auto_start', 0);
+ini_set('session.use_trans_sid', 0);
+ini_set('display_errors', 1);
+ini_set('max_execution_time', 14400);
+ini_set('memory_limit', '1024M');
+error_reporting(E_ALL ^ (E_NOTICE | E_WARNING | E_DEPRECATED));
+session_start();
+
+// Bring in core functionality
+$_conf = array();
+require_once APP_DIR . "/data/config/config.php";
+require_once APP_DIR . "/modules/jrCore/include.php";
+
+$umask = (int) sprintf('%03o', umask());
+$_conf['jrCore_dir_perms'] = octdec(0 . (777 - $umask));
+$_conf['jrCore_file_perms'] = octdec(0 . (666 - $umask));
+
+// Load modules
+$_mods = array('jrCore' => jrCore_meta());
+$_urls = array('core' => 'jrCore');
+if (is_dir(APP_DIR . "/modules")) {
+    if ($h = opendir(APP_DIR . "/modules")) {
+        while (($file = readdir($h)) !== false) {
+            if ($file == 'index.html' || $file == '.' || $file == '..' || $file == 'jrCore' || strpos($file, '-release-')) {
+                continue;
+            }
+            if (is_file(APP_DIR . "/modules/{$file}/include.php")) {
+                require_once APP_DIR . "/modules/{$file}/include.php";
+            }
+            $mfunc = "{$file}_meta";
+            if (function_exists($mfunc)) {
+                $_mods[$file] = $mfunc();
+                $murl = $_mods[$file]['url'];
+                $_urls[$murl] = $file;
+            }
+        }
+    }
+    closedir($h);
+}
+
+jrCore_init();
+foreach ($_mods as $mod_dir => $_inf) {
+    if ($mod_dir != 'jrCore') {
+        $ifunc = "{$mod_dir}_init";
+        if (function_exists($ifunc)) {
+            $ifunc();
+        }
+    }
+}
+
+if (!isset($_REQUEST['repair'])) {
+    echo '<html lang="en"><body>
+    <h2>Jamroom Offline Repair</h2>
+    Select the repair options to perform:
+    <br><br>
+    <form method="post" action="repair.php?repair=1">
+    <input type="checkbox" name="table_repair" checked="checked">&nbsp;Repair Database Tables<br>
+    <input type="checkbox" name="reset_cache" checked="checked">&nbsp;Reset Template and Database Caches<br>
+    <input type="checkbox" name="integrity_check" checked="checked">&nbsp;Run Offline Integrity Check<br>
+    <br>
+    Please be <b>patient</b> - on very large systems this process could take a while to run.<br><br>
+    Press the <b>Start Repair</b> button to begin.
+    <br><br>
+    <input type="submit" value="Start Repair">
+    </form></body></html>';
+    exit;
+}
+
+echo "<b>Jamroom Repair beginning</b>";
+
+if (isset($_REQUEST['table_repair']) && $_REQUEST['table_repair'] == 'on') {
+
+    echo "<br><br>Repairing Database Tables...";
+    $_rt = jrCore_db_query('SHOW TABLES','NUMERIC');
+    if ($_rt && is_array($_rt)) {
+        foreach ($_rt as $tbl) {
+
+            $tbl = reset($tbl);
+            if (strstr($tbl, 'cache') || strstr($tbl, 'session')) {
+                jrCore_db_query("TRUNCATE TABLE {$tbl}");
+            }
+            jrCore_db_query("REPAIR TABLE {$tbl}");
+            echo "<br><b>{$tbl}</b> - database table repair complete";
+            ob_flush();
+            flush();
+
+        }
+    }
+}
+
+if (isset($_REQUEST['reset_cache']) && $_REQUEST['reset_cache'] == 'on') {
+
+    echo "<br><br>Resetting Template and Database caches...";
+
+    jrCore_reset_template_cache();
+    jrCore_delete_all_cache_entries();
+    jrCore_reset_sprite_cache();
+    jrCore_form_delete_all_form_sessions();
+
+    echo "<br>Template and Database caches have been reset";
+    ob_flush();
+    flush();
+}
+
+if (isset($_REQUEST['integrity_check']) && $_REQUEST['integrity_check'] == 'on') {
+    echo "<br><br>Integrity Check beginning...";
+    foreach ($_mods as $mod_dir => $_inf) {
+
+        jrCore_validate_module_schema($mod_dir);
+        jrCore_verify_module($mod_dir);
+        echo "<br><b>{$_inf['name']}</b> - integrity check complete";
+        ob_flush();
+        flush();
+
+    }
+    echo "<br>Integrity Check complete";
+}
+
+echo "<br><br>Repair complete<br><br><b>DELETE THIS SCRIPT or rename to repair.php.html!</b><br><br><br>";
+exit;
+
+// </div></body></html>
